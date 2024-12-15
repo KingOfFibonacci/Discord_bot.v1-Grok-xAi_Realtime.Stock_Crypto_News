@@ -1,0 +1,31 @@
+# Node.js dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Build output
+dist/
+build/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage reports
+coverage/
+
+# Ignore any other files or directories specific to your project
