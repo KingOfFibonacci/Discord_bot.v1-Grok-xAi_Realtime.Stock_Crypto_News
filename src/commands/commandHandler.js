@@ -4,7 +4,7 @@ import { marketCommand } from './marketCommands/marketCommand.js';
 import { cryptoCommand } from './cryptoCommands/cryptoCommand.js';
 
 // Your Discord user ID
-const AUTHORIZED_USER_ID = '711777922813394984'; // Replace with your actual Discord user ID
+const AUTHORIZED_USER_ID = '1319412275611127808'; // Replace with your actual Discord user ID
 
 const commands = {
     '!tweet': tweetCommand,
@@ -14,6 +14,11 @@ const commands = {
 };
 
 export const handleCommand = async (message) => {
+    // Only process messages that start with one of our command prefixes
+    if (!Object.keys(commands).some(cmd => message.content.startsWith(cmd))) {
+        return;
+    }
+
     const command = message.content.split(' ')[0];
     const commandFunction = commands[command];
 
