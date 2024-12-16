@@ -47,11 +47,10 @@ export const cryptoCommand = async (messageContent) => {
                 const news = await getCryptoNews(options);
                 let response = `📰 Crypto News${symbols.length ? ` for ${symbols.join(', ')}` : ''}${category ? ` (${category})` : ''}:\n\n`;
                 news.forEach((article, index) => {
-                    response += `${index + 1}. ${article.title}\n` +
+                    response += `[${article.title}](${article.url})\n` +
                               `📱 Source: ${article.source}\n` +
                               `🏷️ Categories: ${article.categories}\n` +
-                              `⏰ ${article.date} ${article.time}\n` +
-                              `🔗 ${article.url}\n\n`;
+                              `⏰ ${article.date} ${article.time}\n\n`;
                 });
                 return response;
 

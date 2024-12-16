@@ -24,4 +24,35 @@ export const NEWS_CATEGORIES = {
     REGULATION: ['Regulation', 'Business', 'Legal'],
     MINING: ['Mining', 'Technology', 'Bitcoin'],
     EXCHANGE: ['Exchange', 'Trading', 'Business']
+};
+
+export const NEWS_SOURCES_TIERS = {
+    TIER_1: [
+        'Bloomberg Crypto',
+        'Financial Times Crypto',
+        'Forbes Digital Assets',
+        'CoinDesk',
+        'The Block'
+    ],
+    TIER_2: [
+        'Cointelegraph',
+        'Decrypt',
+        'The Defiant',
+        'Bitcoin Magazine',
+        'Yahoo Finance Bitcoin'
+    ],
+    TIER_3: [
+        'CryptoSlate',
+        'Blockworks',
+        'Crypto Briefing',
+        'CCData',
+        'Kraken Blog'
+    ],
+    TIER_4: [
+        'BeInCrypto',
+        'CryptoPotato',
+        'Bitcoinist',
+        'NewsBTC',
+        'AMB Crypto'
+    ]
 }; 

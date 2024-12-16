@@ -1,6 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-import { API, NEWS_CATEGORIES } from '../../config/constants.js';
+import { API, NEWS_CATEGORIES, NEWS_SOURCES_TIERS } from '../../config/constants.js';
 
 dotenv.config();
 
@@ -60,7 +60,8 @@ export const getCryptoNews = async (options = {}) => {
         // Remove duplicates and join
         const categoryString = [...new Set(categories)].join(',');
         
-        const url = `${BASE_URL}/v2/news/?${categoryString ? `categories=${categoryString}&` : ''}excludeCategories=Sponsored&api_key=${CRYPTOCOMPARE_API_KEY}`;
+        // Get more articles initially to allow for filtering
+        const url = `${BASE_URL}/v2/news/?${categoryString ? `categories=${categoryString}&` : ''}excludeCategories=Sponsored&limit=50&api_key=${CRYPTOCOMPARE_API_KEY}`;
         console.log('Fetching news from:', url);
 
         const response = await axios.get(url);
@@ -69,12 +70,33 @@ export const getCryptoNews = async (options = {}) => {
             throw new Error('No news found');
         }
 
-        return response.data.Data.slice(0, options.limit || 3).map(article => ({
+        // Sort articles by source tier and date
+        const articles = response.data.Data.map(article => {
+            let tier = 5; // Default tier for unlisted sources
+            if (NEWS_SOURCES_TIERS.TIER_1.includes(article.source)) tier = 1;
+            else if (NEWS_SOURCES_TIERS.TIER_2.includes(article.source)) tier = 2;
+            else if (NEWS_SOURCES_TIERS.TIER_3.includes(article.source)) tier = 3;
+            else if (NEWS_SOURCES_TIERS.TIER_4.includes(article.source)) tier = 4;
+
+            return {
+                ...article,
+                tier,
+                published_on: new Date(article.published_on * 1000)
+            };
+        }).sort((a, b) => {
+            // First sort by tier
+            if (a.tier !== b.tier) return a.tier - b.tier;
+            // Then by date (most recent first)
+            return b.published_on - a.published_on;
+        });
+
+        // Return the top articles after sorting
+        return articles.slice(0, options.limit || 3).map(article => ({
             title: article.title,
-            source: article.source,
+            source: `[Tier ${article.tier}] ${article.source}`,
             categories: article.categories,
-            date: new Date(article.published_on * 1000).toLocaleDateString(),
-            time: new Date(article.published_on * 1000).toLocaleTimeString(),
+            date: article.published_on.toLocaleDateString(),
+            time: article.published_on.toLocaleTimeString(),
             url: article.url
         }));
     } catch (error) {
