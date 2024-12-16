@@ -1,6 +1,6 @@
 # Crypto & Market Discord Bot
 
-A powerful Discord bot for tracking cryptocurrency prices, market data, and more in real-time. Built with Node.js and Discord.js.
+A powerful Discord bot featuring Grok by xAI for tracking cryptocurrency prices, market data, and more in real-time. Built with Node.js and Discord.js.
 
 ## Features
 
