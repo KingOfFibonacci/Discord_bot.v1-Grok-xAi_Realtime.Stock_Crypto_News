@@ -3,6 +3,7 @@ import { searchCommand } from './xaiCommands/searchCommand.js';
 import { marketCommand } from './marketCommands/marketCommand.js';
 import { cryptoCommand } from './crypto/cryptoCommand.js';
 import { trackCommand } from './crypto/trackCommand.js';
+import { rateCommand } from './crypto/rateCommand.js';
 import { DISCORD, COMMANDS } from '../config/settings.js';
 
 const commands = {
@@ -10,7 +11,8 @@ const commands = {
     [COMMANDS.GROK]: searchCommand,
     [COMMANDS.STOCK]: marketCommand,
     [COMMANDS.CRYPTO]: cryptoCommand,
-    [COMMANDS.TRACK]: trackCommand
+    [COMMANDS.TRACK]: trackCommand,
+    '!rate': rateCommand
 };
 
 export const handleCommand = async (message) => {
