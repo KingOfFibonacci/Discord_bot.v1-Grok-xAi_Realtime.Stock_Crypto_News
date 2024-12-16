@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
 import { EmbedBuilder } from 'discord.js';
-import { DISCORD } from '../../config/settings.js';
 import { twelveDataService } from './twelveDataService.js';
 
-const TRACKED_STOCKS = ['AAPL', 'TSLA', 'AMZN', 'META', 'NVDA', 'GOOGL', 'AMC', 'GME'];
+const TRACKED_STOCKS = ['AAPL', 'TSLA', 'NVDA'];
 
 class StockTrackerService extends EventEmitter {
     constructor() {
@@ -21,88 +20,107 @@ class StockTrackerService extends EventEmitter {
             this.trackingMessage = messages.first();
             
             if (!this.trackingMessage) {
+                const initialUpdates = Array.from(this.trackedStocks).map(symbol => ({
+                    symbol,
+                    price: null,
+                    open: null,
+                    high: null,
+                    low: null,
+                    volume: null,
+                    previousClose: null,
+                    percentChange: null,
+                    rsi: null,
+                    sma50: null
+                }));
+
                 this.trackingMessage = await this.channel.send({
-                    embeds: [this.createEmbed([])]
+                    embeds: [this.createEmbed(initialUpdates)]
                 });
             }
 
-            // Start tracking with polling
-            twelveDataService.on('price', (data) => this.handlePriceUpdate(data));
+            // Start tracking
+            twelveDataService.on('marketData', (data) => this.handleMarketData(data));
             await twelveDataService.startTracking(Array.from(this.trackedStocks));
-            console.log('Stock tracker initialized with:', Array.from(this.trackedStocks).join(', '));
+            console.log('Market data tracker initialized with:', Array.from(this.trackedStocks).join(', '));
         } catch (error) {
-            console.error('Error initializing stock tracker channel:', error);
+            console.error('Error initializing market data tracker channel:', error);
         }
     }
 
-    handlePriceUpdate(data) {
-        const lastPrice = this.lastPrices.get(data.symbol);
-        const priceChange = lastPrice ? ((data.price - lastPrice) / lastPrice) * 100 : 0;
-        this.lastPrices.set(data.symbol, data.price);
+    handleMarketData(data) {
+        this.lastPrices.set(data.symbol, data);
 
-        const updates = Array.from(this.trackedStocks).map(symbol => ({
-            symbol,
-            price: data.price,
-            dayVolume: data.day_volume,
-            timestamp: data.timestamp,
-            priceChange
-        }));
+        const updates = Array.from(this.trackedStocks).map(symbol => {
+            return this.lastPrices.get(symbol) || {
+                symbol,
+                price: null,
+                open: null,
+                high: null,
+                low: null,
+                volume: null,
+                previousClose: null,
+                percentChange: null,
+                rsi: null,
+                sma50: null
+            };
+        });
 
         this.updateMessage(updates);
     }
 
     createEmbed(updates) {
-        const embed = new EmbedBuilder()
-            .setTitle('📊 Live Stock Market Tracker')
-            .setColor('#00ff88')
-            .setFooter({ 
-                text: '💎 Premium Market Intelligence • ' + 
-                      (updates[0]?.marketClosed ? 'Market Closed - Last Known Prices' : 'Real-time Updates')
-            })
-            .setTimestamp();
-
-        // Market Overview Section
-        let totalVolume = 0;
-        let gainers = 0;
-        let losers = 0;
+        const embeds = [];
 
         updates.forEach(update => {
-            totalVolume += update.dayVolume || 0;
-            if (update.priceChange >= 0) gainers++; else losers++;
+            const stockEmbed = new EmbedBuilder()
+                .setColor('#2F3136');
+
+            if (!update.price) {
+                stockEmbed.setDescription('Loading data...');
+                embeds.push(stockEmbed);
+                return;
+            }
+
+            // Set the logo as thumbnail for this stock's embed
+            if (update.logo) {
+                stockEmbed.setThumbnail(update.logo);
+            }
+
+            // Format the data in a clean way
+            const stockInfo = [
+                `**${update.symbol}**`,
+                '',
+                `O: $${update.open.toFixed(2)} | H: $${update.high.toFixed(2)} | L: $${update.low.toFixed(2)} | C: $${update.price.toFixed(2)}`,
+                `Prev Close: $${update.previousClose.toFixed(2)}`,
+                '',
+                `52W Range: $${update.fiftyTwoWeekLow?.toFixed(2)} - $${update.fiftyTwoWeekHigh?.toFixed(2)}`,
+                `Vol: ${(update.volume/1e6).toFixed(2)}M | Avg Vol: ${(update.averageVolume/1e6).toFixed(2)}M`,
+                `Market: ${update.isMarketOpen ? '🟢 Open' : '🔴 Closed'}`,
+                '',
+                `1D: ${update.percentChange >= 0 ? '+' : ''}${update.percentChange?.toFixed(2)}% | ` +
+                `1W: ${update.weeklyChange >= 0 ? '+' : ''}${update.weeklyChange?.toFixed(2)}% | ` +
+                `1M: ${update.monthlyChange >= 0 ? '+' : ''}${update.monthlyChange?.toFixed(2)}%`
+            ].join('\n');
+
+            stockEmbed.setDescription(stockInfo);
+            embeds.push(stockEmbed);
         });
 
-        embed.addFields({
-            name: '📈 Market Overview',
-            value: `Trading Volume: ${(totalVolume/1e6).toFixed(2)}M\n` +
-                   `Gainers: ${gainers} 📈 | Losers: ${losers} 📉\n` +
-                   `Last Update: ${new Date().toLocaleTimeString()}`,
-            inline: false
-        });
-
-        // Add stock price fields
-        updates.forEach(update => {
-            const changeEmoji = update.priceChange >= 0 ? '🟢' : '🔴';
-            const volumeFormatted = update.dayVolume > 1e6 
-                ? `${(update.dayVolume/1e6).toFixed(2)}M`
-                : update.dayVolume?.toLocaleString();
-
-            embed.addFields({
-                name: `${changeEmoji} ${update.symbol}`,
-                value: `💰 $${update.price?.toLocaleString()}\n` +
-                       `📊 Change: ${update.priceChange?.toFixed(2)}%\n` +
-                       `📈 Vol: ${volumeFormatted || 'N/A'}`,
-                inline: true
+        // Add footer to last embed
+        if (embeds.length > 0) {
+            embeds[embeds.length - 1].setFooter({
+                text: '💎 Updated every 4 hours • Data from TwelveData • Today at ' + new Date().toLocaleTimeString()
             });
-        });
+        }
 
-        return embed;
+        return embeds;
     }
 
     async updateMessage(updates) {
         if (this.trackingMessage) {
             try {
                 await this.trackingMessage.edit({
-                    embeds: [this.createEmbed(updates)]
+                    embeds: this.createEmbed(updates)
                 });
             } catch (error) {
                 console.error('Error updating tracking message:', error);
