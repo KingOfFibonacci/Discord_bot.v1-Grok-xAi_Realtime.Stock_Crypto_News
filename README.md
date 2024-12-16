@@ -1,6 +1,6 @@
-# Crypto & Market Discord Bot
+# Discord Crypto & Market Bot
 
-A powerful Discord bot featuring Grok by xAI for tracking cryptocurrency prices, market data, and more in real-time. Built with Node.js and Discord.js.
+A powerful Discord bot for real-time cryptocurrency tracking, market data, and news aggregation. Built with Node.js and Discord.js.
 
 ## Features
 
@@ -12,10 +12,18 @@ A powerful Discord bot featuring Grok by xAI for tracking cryptocurrency prices,
 - Volume tracking
 - Multi-embed display for large lists
 
+### News Aggregation
+- Live crypto news updates every 15 minutes
+- Tiered source reliability system
+- Automatic news filtering and sorting
+- Rolling display of latest articles
+- Source categorization
+
 ### Market Data
 - Stock price tracking
 - Market news updates
 - Company information
+- Historical data analysis
 
 ### Social Integration
 - Twitter posting capability (authorized users only)
@@ -24,19 +32,26 @@ A powerful Discord bot featuring Grok by xAI for tracking cryptocurrency prices,
 ## Commands
 
 ### Crypto Commands
-!track start [symbols]  - Start tracking cryptocurrencies (e.g., !track start BTC ETH DOGE)
-!track stop [symbols]   - Stop tracking specific coins or all if no symbols provided
+```
+!track start [symbols]  - Start tracking cryptocurrencies
+!track stop [symbols]   - Stop tracking specific coins or all
 !track list            - Show currently tracked cryptocurrencies
 !crypto price [symbol] - Get current price for specific cryptocurrency
 !crypto news [symbol]  - Get latest news for a cryptocurrency
+!rate                  - Check API usage statistics
+```
 
 ### Market Commands
+```
 !market price [symbol] - Get current stock price
 !market news [symbol]  - Get latest market news for a stock
+```
 
 ### Other Commands
+```
 !tweet [message]       - Post a tweet (authorized users only)
 !grok [message]       - Get AI-powered response
+```
 
 ## Setup
 
@@ -62,7 +77,8 @@ TWITTER_ACCESS_SECRET="your_twitter_access_secret"
 ```javascript
 export const DISCORD = {
     AUTHORIZED_USER_ID: 'your_discord_user_id',
-    CRYPTO_TRACKER_CHANNEL_ID: 'your_channel_id'
+    CRYPTO_TRACKER_CHANNEL_ID: 'your_channel_id',
+    CRYPTO_NEWS_CHANNEL_ID: 'your_news_channel_id'
 };
 ```
 
@@ -73,11 +89,13 @@ npm start
 
 ## Technical Details
 
-- Uses CryptoCompare API for cryptocurrency data (100k API calls/month limit)
-- Implements batch processing for efficient API usage
+- Efficient API usage with batch processing
 - Supports up to 50 simultaneous crypto trackers
-- Auto-splits large tracking lists into multiple embeds (25 items per embed)
-- Real-time updates every 30 seconds
+- Auto-splits large tracking lists into multiple embeds
+- Real-time price updates every 30 seconds
+- News updates every 15 minutes
+- Tiered news source reliability system
+- Persistent tracking across bot restarts
 
 ## Dependencies
 
@@ -91,8 +109,10 @@ npm start
 
 - Commands are restricted to authorized users only
 - Twitter integration requires valid Twitter API credentials
-- Respects API rate limits and implements efficient batching
+- Respects API rate limits through efficient batching
 - Designed for 24/7 operation
+- Automatic news source categorization
+- Rolling updates for both prices and news
 
 ## License
 
@@ -100,4 +120,4 @@ MIT License
 
 ## Author
 
-[Your Name]
+[Brandon Welch]

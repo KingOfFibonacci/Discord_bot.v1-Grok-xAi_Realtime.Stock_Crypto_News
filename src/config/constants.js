@@ -28,18 +28,18 @@ export const NEWS_CATEGORIES = {
 
 export const NEWS_SOURCES_TIERS = {
     TIER_1: [
-        'Bloomberg Crypto',
+        'CoinDesk',
         'Financial Times Crypto',
         'Forbes Digital Assets',
-        'CoinDesk',
-        'The Block'
+        'The Block',
+        'Bloomberg Crypto'
     ],
     TIER_2: [
         'Cointelegraph',
         'Decrypt',
-        'The Defiant',
         'Bitcoin Magazine',
-        'Yahoo Finance Bitcoin'
+        'Yahoo Finance Bitcoin',
+        'The Defiant'
     ],
     TIER_3: [
         'CryptoSlate',

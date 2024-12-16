@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
 import { handleCommand } from './commands/commandHandler.js';
 import { cryptoTracker } from './services/crypto/cryptoTrackerService.js';
+import { cryptoNewsTracker } from './services/crypto/cryptoNewsTrackerService.js';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ const discordClient = new Client({
 discordClient.on('ready', async () => {
     console.log('Bot is ready!');
     await cryptoTracker.initializeChannel(discordClient);
+    await cryptoNewsTracker.initializeChannel(discordClient);
 });
 
 discordClient.on('messageCreate', async (message) => {
