@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { API } from '../../config/constants.js';
 import { EmbedBuilder } from 'discord.js';
 import { DISCORD } from '../../config/settings.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 dotenv.config();
 
@@ -11,6 +13,7 @@ const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;
 const UPDATE_INTERVAL = 30000; // 30 seconds between updates
 const MAX_TRACKED_COINS = 50;
 const FIELDS_PER_EMBED = 25;
+const TRACKED_COINS_PATH = path.join(process.cwd(), 'src', 'data', 'trackedCoins.json');
 
 class CryptoTrackerService extends EventEmitter {
     constructor() {
@@ -22,17 +25,54 @@ class CryptoTrackerService extends EventEmitter {
         this.channel = null;
     }
 
+    async loadTrackedCoins() {
+        try {
+            const data = await fs.readFile(TRACKED_COINS_PATH, 'utf8');
+            const { trackedSymbols } = JSON.parse(data);
+            trackedSymbols.forEach(symbol => {
+                this.trackedCoins.set(symbol.toUpperCase(), true);
+            });
+            console.log('Loaded tracked coins:', trackedSymbols);
+        } catch (error) {
+            console.error('Error loading tracked coins:', error);
+        }
+    }
+
+    async saveTrackedCoins() {
+        try {
+            const trackedSymbols = Array.from(this.trackedCoins.keys());
+            const messageId = this.trackingMessage?.id;
+            await fs.writeFile(TRACKED_COINS_PATH, JSON.stringify({
+                trackedSymbols,
+                lastMessageId: messageId
+            }, null, 2));
+        } catch (error) {
+            console.error('Error saving tracked coins:', error);
+        }
+    }
+
     async initializeChannel(client) {
         try {
             this.channel = await client.channels.fetch(DISCORD.CRYPTO_TRACKER_CHANNEL_ID);
+            
+            // Load previously tracked coins
+            await this.loadTrackedCoins();
+            
             // Find existing tracking message or create new one
             const messages = await this.channel.messages.fetch({ limit: 100 });
             this.trackingMessage = messages.find(m => m.author.id === client.user.id);
             
             if (!this.trackingMessage) {
                 this.trackingMessage = await this.channel.send({
-                    embeds: [this.createEmbed([])]
+                    embeds: this.createEmbeds([])
                 });
+            }
+
+            // Start tracking if we have coins to track
+            if (this.trackedCoins.size > 0) {
+                await this.updatePrices();
+                this.updateInterval = setInterval(() => this.updatePrices(), UPDATE_INTERVAL);
+                console.log('Resumed tracking for', this.trackedCoins.size, 'coins');
             }
         } catch (error) {
             console.error('Error initializing crypto tracker channel:', error);
@@ -125,9 +165,12 @@ class CryptoTrackerService extends EventEmitter {
             await this.updatePrices();
             this.updateInterval = setInterval(() => this.updatePrices(), UPDATE_INTERVAL);
         }
+
+        // Save the updated tracking list
+        await this.saveTrackedCoins();
     }
 
-    stopTracking(symbols) {
+    async stopTracking(symbols) {
         if (!symbols) {
             // Stop tracking all coins
             this.trackedCoins.clear();
@@ -149,6 +192,9 @@ class CryptoTrackerService extends EventEmitter {
                 this.updateInterval = null;
             }
         }
+
+        // Save the updated tracking list
+        await this.saveTrackedCoins();
     }
 
     async updatePrices() {
