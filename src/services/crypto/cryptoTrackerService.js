@@ -80,30 +80,98 @@ class CryptoTrackerService extends EventEmitter {
     }
 
     createEmbed(updates) {
-        const embed = new EmbedBuilder()
-            .setTitle('🚀 Live Crypto Price Tracker')
-            .setColor('#0099ff')
+        const embeds = [];
+        
+        // First embed with overview and top movers
+        const overviewEmbed = new EmbedBuilder()
+            .setTitle('🚀 Premium Crypto Analytics')
+            .setColor('#00ff88')
+            .setFooter({ 
+                text: '💎 Premium Market Intelligence • Updated every 30s'
+            })
             .setTimestamp();
 
-        if (updates.length === 0) {
-            embed.setDescription('No cryptocurrencies currently tracked');
-            return embed;
-        }
+        // Market Overview Section
+        let totalVolume = 0;
+        let gainers = 0;
+        let losers = 0;
 
         updates.forEach(update => {
-            const changeEmoji = update.change24h >= 0 ? '📈' : '📉';
-            const recentChangeEmoji = update.priceChange >= 0 ? '🟢' : '🔴';
-            
-            embed.addFields({
-                name: `${update.symbol} ${recentChangeEmoji}`,
-                value: `💰 $${update.price.toLocaleString()}\n` +
-                      `${changeEmoji} 24h: ${update.changePercent24h.toFixed(2)}%\n` +
-                      `📊 Vol: $${Math.round(update.volume24h).toLocaleString()}`,
-                inline: true
-            });
+            totalVolume += update.volume24h;
+            if (update.change24h >= 0) gainers++; else losers++;
         });
 
-        return embed;
+        // Add Market Summary
+        overviewEmbed.addFields({
+            name: '📊 Market Overview',
+            value: `Trading Volume: $${(totalVolume/1e9).toFixed(2)}B\n` +
+                   `Gainers: ${gainers} 📈 | Losers: ${losers} 📉\n` +
+                   `Last Update: ${new Date().toLocaleTimeString()}`,
+            inline: false
+        });
+
+        // Group coins by performance
+        const topGainers = updates
+            .filter(u => u.change24h > 0)
+            .sort((a, b) => b.change24h - a.change24h)
+            .slice(0, 3);
+
+        const topLosers = updates
+            .filter(u => u.change24h < 0)
+            .sort((a, b) => a.change24h - b.change24h)
+            .slice(0, 3);
+
+        // Add Top Movers
+        if (topGainers.length > 0) {
+            overviewEmbed.addFields({
+                name: '🔥 Top Gainers',
+                value: topGainers.map(coin => 
+                    `${coin.symbol}: +${coin.changePercent24h.toFixed(2)}% ($${coin.price.toLocaleString()})`
+                ).join('\n'),
+                inline: true
+            });
+        }
+
+        if (topLosers.length > 0) {
+            overviewEmbed.addFields({
+                name: '💫 Top Losers',
+                value: topLosers.map(coin => 
+                    `${coin.symbol}: ${coin.changePercent24h.toFixed(2)}% ($${coin.price.toLocaleString()})`
+                ).join('\n'),
+                inline: true
+            });
+        }
+
+        embeds.push(overviewEmbed);
+
+        // Split remaining coins into chunks of 25 for additional embeds
+        for (let i = 0; i < updates.length; i += 25) {
+            const chunk = updates.slice(i, i + 25);
+            const priceEmbed = new EmbedBuilder()
+                .setTitle(`🚀 Crypto Prices ${Math.floor(i/25) + 1}/${Math.ceil(updates.length/25)}`)
+                .setColor('#00ff88')
+                .setTimestamp();
+
+            chunk.forEach(update => {
+                const changeEmoji = update.change24h >= 0 ? '🟢' : '🔴';
+                const trendEmoji = update.priceChange >= 0 ? '📈' : '📉';
+                const volumeFormatted = update.volume24h > 1e9 
+                    ? `$${(update.volume24h/1e9).toFixed(2)}B`
+                    : `$${(update.volume24h/1e6).toFixed(2)}M`;
+
+                priceEmbed.addFields({
+                    name: `${changeEmoji} ${update.symbol}`,
+                    value: `💎 $${update.price.toLocaleString()}\n` +
+                           `${trendEmoji} ${update.changePercent24h.toFixed(2)}%\n` +
+                           `📊 Vol: ${volumeFormatted}`,
+                    inline: true
+                });
+            });
+
+            embeds.push(priceEmbed);
+        }
+
+        return embeds;
     }
 
     createEmbeds(updates) {
@@ -143,7 +211,7 @@ class CryptoTrackerService extends EventEmitter {
         if (this.trackingMessage) {
             try {
                 await this.trackingMessage.edit({
-                    embeds: this.createEmbeds(updates)
+                    embeds: this.createEmbed(updates)
                 });
             } catch (error) {
                 console.error('Error updating tracking message:', error);
