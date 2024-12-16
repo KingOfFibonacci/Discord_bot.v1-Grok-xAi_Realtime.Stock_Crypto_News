@@ -1,3 +1,0 @@
-import { getStockPrice, getMarketNews } from '../../services/market/polygonService.js';
-
-// Rest of the file remains the same... 

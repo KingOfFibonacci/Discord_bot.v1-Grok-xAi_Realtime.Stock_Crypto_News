@@ -22,7 +22,7 @@ export const getStockPrice = async (symbol) => {
             endDate
         );
         
-        console.log('API Response:', JSON.stringify(response, null, 2));
+        console.log('Polygon API Response:', JSON.stringify(response, null, 2));
         
         if (!response || !response.results || response.results.length === 0) {
             console.log('No results found in response');
@@ -31,10 +31,10 @@ export const getStockPrice = async (symbol) => {
 
         const result = response.results[response.results.length - 1];
         return {
-            close: result.c,
-            open: result.o,
-            high: result.h,
-            low: result.l,
+            close: result.c.toFixed(2),
+            open: result.o.toFixed(2),
+            high: result.h.toFixed(2),
+            low: result.l.toFixed(2),
             volume: result.v,
             date: new Date(result.t).toISOString().split('T')[0]
         };

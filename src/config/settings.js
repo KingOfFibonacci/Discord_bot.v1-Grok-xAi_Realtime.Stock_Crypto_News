@@ -6,7 +6,7 @@ export const DISCORD = {
 export const COMMANDS = {
     TWEET: '!tweet',
     GROK: '!grok',
-    STOCK: '!stock',
+    STOCK: '!market',
     CRYPTO: '!crypto',
     TRACK: '!track'
 }; 
