@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { handleCommand } from './commands/commandHandler.js';
 import { cryptoTracker } from './services/crypto/cryptoTrackerService.js';
 import { cryptoNewsTracker } from './services/crypto/cryptoNewsTrackerService.js';
+import { stockTracker } from './services/market/stockTrackerService.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ discordClient.on('ready', async () => {
     console.log('Bot is ready!');
     await cryptoTracker.initializeChannel(discordClient);
     await cryptoNewsTracker.initializeChannel(discordClient);
+    await stockTracker.initializeChannel(discordClient);
 });
 
 discordClient.on('messageCreate', async (message) => {

@@ -161,7 +161,7 @@ class CryptoTrackerService extends EventEmitter {
 
                 priceEmbed.addFields({
                     name: `${changeEmoji} ${update.symbol}`,
-                    value: `💎 $${update.price.toLocaleString()}\n` +
+                    value: `💸 $${update.price.toLocaleString()}\n` +
                            `${trendEmoji} ${update.changePercent24h.toFixed(2)}%\n` +
                            `📊 Vol: ${volumeFormatted}`,
                     inline: true
