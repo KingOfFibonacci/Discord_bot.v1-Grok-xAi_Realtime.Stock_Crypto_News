@@ -20,21 +20,17 @@ class StockTrackerService extends EventEmitter {
             this.trackingMessage = messages.first();
             
             if (!this.trackingMessage) {
-                const initialUpdates = Array.from(this.trackedStocks).map(symbol => ({
-                    symbol,
-                    price: null,
-                    open: null,
-                    high: null,
-                    low: null,
-                    volume: null,
-                    previousClose: null,
-                    percentChange: null,
-                    rsi: null,
-                    sma50: null
-                }));
+                // Create a single initial embed
+                const embed = new EmbedBuilder()
+                    .setColor('#2F3136')
+                    .setTitle('📊 Market Data')
+                    .setDescription('Loading market data...')
+                    .setFooter({ 
+                        text: '💎 Updated every 4 hours • Today at ' + new Date().toLocaleTimeString()
+                    });
 
                 this.trackingMessage = await this.channel.send({
-                    embeds: [this.createEmbed(initialUpdates)]
+                    embeds: [embed]
                 });
             }
 
@@ -69,21 +65,19 @@ class StockTrackerService extends EventEmitter {
     }
 
     createEmbed(updates) {
-        const embeds = [];
-
-        updates.forEach(update => {
-            const stockEmbed = new EmbedBuilder()
+        // Create an array to hold our embeds
+        const embeds = updates.map(update => {
+            const embed = new EmbedBuilder()
                 .setColor('#2F3136');
 
             if (!update.price) {
-                stockEmbed.setDescription('Loading data...');
-                embeds.push(stockEmbed);
-                return;
+                embed.setDescription(`Loading data for ${update.symbol}...`);
+                return embed;
             }
 
-            // Set the logo as thumbnail for this stock's embed
+            // Set the logo as thumbnail if available
             if (update.logo) {
-                stockEmbed.setThumbnail(update.logo);
+                embed.setThumbnail(update.logo);
             }
 
             // Format the data in a clean way
@@ -102,14 +96,14 @@ class StockTrackerService extends EventEmitter {
                 `1M: ${update.monthlyChange >= 0 ? '+' : ''}${update.monthlyChange?.toFixed(2)}%`
             ].join('\n');
 
-            stockEmbed.setDescription(stockInfo);
-            embeds.push(stockEmbed);
+            embed.setDescription(stockInfo);
+            return embed;
         });
 
         // Add footer to last embed
         if (embeds.length > 0) {
             embeds[embeds.length - 1].setFooter({
-                text: '💎 Updated every 4 hours • Data from TwelveData • Today at ' + new Date().toLocaleTimeString()
+                text: '💎 Updated every 4 hours • Today at ' + new Date().toLocaleTimeString()
             });
         }
 
@@ -119,11 +113,18 @@ class StockTrackerService extends EventEmitter {
     async updateMessage(updates) {
         if (this.trackingMessage) {
             try {
-                await this.trackingMessage.edit({
-                    embeds: this.createEmbed(updates)
-                });
+                const embeds = this.createEmbed(updates);
+                await this.trackingMessage.edit({ embeds });
             } catch (error) {
-                console.error('Error updating tracking message:', error);
+                console.error('Error updating tracking message:', error.message);
+                // If we get an API error, log more details
+                if (error.code) {
+                    console.error('Discord API Error:', {
+                        code: error.code,
+                        message: error.message,
+                        status: error.status
+                    });
+                }
             }
         }
     }
