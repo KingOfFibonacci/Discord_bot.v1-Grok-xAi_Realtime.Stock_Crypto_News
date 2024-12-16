@@ -1,6 +1,7 @@
-import { polygonClient } from '../clients/polygonClient.js';
+import { polygonClient } from '../../clients/api/polygonClient.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { API } from '../../config/constants.js';
 
 dotenv.config();
 

@@ -1,9 +1,8 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { API } from '../../config/constants.js';
 
 dotenv.config();
-
-const XAI_API_URL = 'https://api.x.ai/v1/chat/completions'; // Ensure this is the correct endpoint
 
 // Function to perform a search using the xAI API
 export const searchXAI = async (userQuestion) => {
@@ -24,15 +23,15 @@ export const searchXAI = async (userQuestion) => {
     };
 
     try {
-        const response = await axios.post(XAI_API_URL, requestBody, {
+        const response = await axios.post(API.XAI.BASE_URL, requestBody, {
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.XAI_API_KEY}` // Ensure you have this in your .env file
+                'Authorization': `Bearer ${process.env.XAI_API_KEY}`
             }
         });
-        return response.data.choices[0].message.content; // Return the assistant's message
+        return response.data.choices[0].message.content;
     } catch (error) {
         console.error("Error fetching from xAI:", error.message);
-        throw error; // Rethrow for handling in the command
+        throw error;
     }
 };

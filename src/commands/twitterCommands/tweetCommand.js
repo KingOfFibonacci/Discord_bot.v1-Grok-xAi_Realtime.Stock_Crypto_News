@@ -1,4 +1,4 @@
-import { sendTweet } from '../../services/twitterService.js';
+import { sendTweet } from '../../services/twitter/twitterService.js';
 
 export const tweetCommand = async (messageContent, message) => {
     const tweetMessage = messageContent.slice(7).trim(); // Get the tweet message

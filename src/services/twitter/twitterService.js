@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { twitterClient } from '../clients/twitterClient.js';
+import { twitterClient } from '../../clients/api/twitterClient.js';
 
 export const sendTweet = async (tweetMessage, mediaUrl) => {
     try {

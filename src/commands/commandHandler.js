@@ -1,16 +1,16 @@
 import { tweetCommand } from './twitterCommands/tweetCommand.js';
 import { searchCommand } from './xaiCommands/searchCommand.js';
 import { marketCommand } from './marketCommands/marketCommand.js';
-import { cryptoCommand } from './cryptoCommands/cryptoCommand.js';
-
-// Your Discord user ID
-const AUTHORIZED_USER_ID = '1319412275611127808'; // Replace with your actual Discord user ID
+import { cryptoCommand } from './crypto/cryptoCommand.js';
+import { trackCommand } from './crypto/trackCommand.js';
+import { DISCORD, COMMANDS } from '../config/settings.js';
 
 const commands = {
-    '!tweet': tweetCommand,
-    '!grok': searchCommand,
-    '!market': marketCommand,
-    '!crypto': cryptoCommand
+    [COMMANDS.TWEET]: tweetCommand,
+    [COMMANDS.GROK]: searchCommand,
+    [COMMANDS.STOCK]: marketCommand,
+    [COMMANDS.CRYPTO]: cryptoCommand,
+    [COMMANDS.TRACK]: trackCommand
 };
 
 export const handleCommand = async (message) => {
@@ -19,13 +19,13 @@ export const handleCommand = async (message) => {
         return;
     }
 
+    // Check if user is authorized
+    if (message.author.id !== DISCORD.AUTHORIZED_USER_ID) {
+        return message.reply("Sorry, you're not authorized to use these commands.");
+    }
+
     const command = message.content.split(' ')[0];
     const commandFunction = commands[command];
-
-    // Check if it's the tweet command and if the user is authorized
-    if (command === '!tweet' && message.author.id !== AUTHORIZED_USER_ID) {
-        return message.reply("Sorry, you're not authorized to use the tweet command.");
-    }
 
     if (commandFunction) {
         const response = await commandFunction(message.content, message);

@@ -1,4 +1,4 @@
-import { searchXAI } from '../../services/xaiService.js'; // Import the search function
+import { searchXAI } from '../../services/xai/xaiService.js'; // Updated path
 
 export const searchCommand = async (messageContent) => {
     const userQuestion = messageContent.slice(6).trim(); // Extract user question
@@ -8,11 +8,11 @@ export const searchCommand = async (messageContent) => {
     }
 
     try {
-        const assistantMessage = await searchXAI(userQuestion); // Call the search function
-        console.log("Grok replied in the channel"); // Log confirmation message
-        return assistantMessage; // Return the assistant's response
+        const assistantMessage = await searchXAI(userQuestion);
+        console.log("Grok replied in the channel");
+        return assistantMessage;
     } catch (error) {
-        console.error("Error in searchCommand:", error); // Debug log for errors
+        console.error("Error in searchCommand:", error);
         return "An error occurred while fetching data from the xAI API.";
     }
 }; 

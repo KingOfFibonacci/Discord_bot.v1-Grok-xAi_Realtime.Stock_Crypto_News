@@ -1,4 +1,4 @@
-import { getStockPrice, getMarketNews } from '../../services/polygonService.js';
+import { getStockPrice, getMarketNews } from '../../services/market/polygonService.js';
 
 export const marketCommand = async (messageContent) => {
     const args = messageContent.split(' ');

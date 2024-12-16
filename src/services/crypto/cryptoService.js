@@ -1,54 +1,45 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { API, NEWS_CATEGORIES } from '../../config/constants.js';
 
 dotenv.config();
 
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;
-const BASE_URL = 'https://min-api.cryptocompare.com/data';
+const BASE_URL = API.CRYPTOCOMPARE.BASE_URL;
 
-// Common categories that users might want to filter by
-export const NEWS_CATEGORIES = {
-    TRADING: ['Trading', 'Market', 'Analysis'],
-    TECHNOLOGY: ['Blockchain', 'Technology', 'Mining'],
-    BUSINESS: ['Business', 'Exchange', 'Regulation'],
-    DEFI: ['DeFi', 'Ethereum', 'Trading'],
-    NFT: ['NFT', 'Blockchain', 'Technology'],
-    REGULATION: ['Regulation', 'Business', 'Legal'],
-    MINING: ['Mining', 'Technology', 'Bitcoin'],
-    EXCHANGE: ['Exchange', 'Trading', 'Business']
-};
-
-export const getCryptoPrice = async (symbol) => {
+export const getCryptoPrice = async (symbols) => {
     try {
-        const cleanSymbol = symbol.replace('$', '').toUpperCase();
+        // Convert single symbol to array if needed
+        const symbolArray = Array.isArray(symbols) ? symbols : [symbols];
+        const cleanSymbols = symbolArray.map(s => s.replace('$', '').toUpperCase());
+        
+        // Use multi-symbol endpoint
         const response = await axios.get(
-            `${BASE_URL}/price?fsym=${cleanSymbol}&tsyms=USD&api_key=${CRYPTOCOMPARE_API_KEY}`
+            `${BASE_URL}/pricemultifull?fsyms=${cleanSymbols.join(',')}&tsyms=USD&api_key=${CRYPTOCOMPARE_API_KEY}`
         );
 
-        if (!response.data || !response.data.USD) {
-            throw new Error(`No price data available for ${cleanSymbol}`);
+        if (!response.data || !response.data.RAW) {
+            throw new Error(`No price data available for ${cleanSymbols.join(', ')}`);
         }
 
-        // Get additional data for 24h change
-        const dailyData = await axios.get(
-            `${BASE_URL}/v2/histohour?fsym=${cleanSymbol}&tsym=USD&limit=24&api_key=${CRYPTOCOMPARE_API_KEY}`
-        );
+        const results = [];
+        for (const symbol in response.data.RAW) {
+            const data = response.data.RAW[symbol].USD;
+            results.push({
+                symbol,
+                price: data.PRICE,
+                change24h: data.CHANGE24HOUR,
+                changePercent24h: data.CHANGEPCT24HOUR,
+                volume24h: data.VOLUME24HOUR,
+                timestamp: new Date(data.LASTUPDATE * 1000).toLocaleString()
+            });
+        }
 
-        const currentPrice = response.data.USD;
-        const dayOpen = dailyData.data.Data.Data[0].open;
-        const priceChange = currentPrice - dayOpen;
-        const priceChangePercent = (priceChange / dayOpen) * 100;
-
-        return {
-            symbol: cleanSymbol,
-            price: currentPrice,
-            change24h: priceChange,
-            changePercent24h: priceChangePercent,
-            timestamp: new Date().toLocaleString()
-        };
+        // Return array if multiple symbols, single object if one symbol
+        return Array.isArray(symbols) ? results : results[0];
     } catch (error) {
-        console.error("Error fetching crypto price:", error);
-        throw new Error(`Unable to fetch price for ${symbol}`);
+        console.error("Error fetching crypto prices:", error);
+        throw new Error(`Unable to fetch prices for ${Array.isArray(symbols) ? symbols.join(', ') : symbols}`);
     }
 };
 
