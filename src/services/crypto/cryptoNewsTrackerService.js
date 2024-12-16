@@ -86,52 +86,52 @@ class CryptoNewsTrackerService extends EventEmitter {
             // Helper function to normalize source names
             const normalizeSourceName = (source) => {
                 const sourceMap = {
-                    // Tier 1
-                    'coindesk': 'CoinDesk',
+                    // Tier 1 (Most Authoritative)
+                    'bloomberg': 'Bloomberg Crypto',
                     'financialtimes_crypto_': 'Financial Times Crypto',
+                    'coindesk': 'CoinDesk',
                     'forbes': 'Forbes Digital Assets',
                     'theblock': 'The Block',
-                    'bloomberg': 'Bloomberg Crypto',
 
-                    // Tier 2
+                    // Tier 2 (Very Reliable)
                     'cointelegraph': 'Cointelegraph',
                     'decrypt': 'Decrypt',
                     'bitcoinmagazine': 'Bitcoin Magazine',
-                    'yahoo': 'Yahoo Finance Bitcoin',
                     'thedefiant': 'The Defiant',
-
-                    // Tier 3
-                    'cryptoslate': 'CryptoSlate',
+                    'yahoo': 'Yahoo Finance Bitcoin',
+                    'bitcoin.com': 'Bitcoin.com',
                     'blockworks': 'Blockworks',
+
+                    // Tier 3 (Good)
+                    'cryptoslate': 'CryptoSlate',
                     'cryptobriefing': 'Crypto Briefing',
                     'ccdata': 'CCData',
                     'kraken': 'Kraken Blog',
-
-                    // Tier 4
                     'beincrypto': 'BeInCrypto',
                     'cryptopotato': 'CryptoPotato',
+                    'coingape': 'CoinGape',
+                    'crypto_news': 'Crypto News',
+
+                    // Tier 4 (Decent)
                     'bitcoinist': 'Bitcoinist',
                     'newsbtc': 'NewsBTC',
                     'ambcrypto': 'AMB Crypto',
+                    'cryptopolitan': 'Cryptopolitan',
+                    'utoday': 'U.Today',
+                    'invezz': 'Invezz',
+                    'nft_news': 'NFT News',
 
-                    // Common sources we're seeing
+                    // Tier 5 (Exercise Caution)
                     'coinpedia': 'CoinPedia',
                     'coinotag': 'CoinOtag',
-                    'coingape': 'CoinGape',
-                    'cryptopolitan': 'Cryptopolitan',
-                    'bitcoin.com': 'Bitcoin.com',
-                    'utoday': 'U.Today',
                     'cryptonewsz': 'CryptoNewsZ',
-                    'nft_news': 'NFT News',
-                    'crypto_news': 'Crypto News',
                     'timestabloid': 'Times Tabloid',
                     'coinpaper': 'CoinPaper',
                     'cryptointelligence': 'Crypto Intelligence',
                     'cointurken': 'CoinTurken',
                     'bitdegree': 'BitDegree',
                     'cryptoknowmics': 'CryptoKnowmics',
-                    'coincu': 'CoinCu',
-                    'invezz': 'Invezz'
+                    'coincu': 'CoinCu'
                 };
 
                 // Convert source to lowercase for case-insensitive matching

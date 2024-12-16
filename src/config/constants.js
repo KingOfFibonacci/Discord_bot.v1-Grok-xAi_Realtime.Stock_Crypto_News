@@ -28,31 +28,50 @@ export const NEWS_CATEGORIES = {
 
 export const NEWS_SOURCES_TIERS = {
     TIER_1: [
-        'CoinDesk',
+        'Bloomberg Crypto',
         'Financial Times Crypto',
+        'CoinDesk',
         'Forbes Digital Assets',
-        'The Block',
-        'Bloomberg Crypto'
+        'The Block'
     ],
     TIER_2: [
         'Cointelegraph',
         'Decrypt',
         'Bitcoin Magazine',
+        'The Defiant',
         'Yahoo Finance Bitcoin',
-        'The Defiant'
+        'Bitcoin.com',
+        'Blockworks'
     ],
     TIER_3: [
         'CryptoSlate',
-        'Blockworks',
         'Crypto Briefing',
         'CCData',
-        'Kraken Blog'
-    ],
-    TIER_4: [
+        'Kraken Blog',
         'BeInCrypto',
         'CryptoPotato',
+        'CoinGape',
+        'Crypto News'
+    ],
+    TIER_4: [
         'Bitcoinist',
         'NewsBTC',
-        'AMB Crypto'
+        'AMB Crypto',
+        'Cryptopolitan',
+        'U.Today',
+        'Invezz',
+        'NFT News'
+    ],
+    TIER_5: [
+        'CoinPedia',
+        'CoinOtag',
+        'CryptoNewsZ',
+        'Times Tabloid',
+        'CoinPaper',
+        'Crypto Intelligence',
+        'CoinTurken',
+        'BitDegree',
+        'CryptoKnowmics',
+        'CoinCu'
     ]
 }; 
