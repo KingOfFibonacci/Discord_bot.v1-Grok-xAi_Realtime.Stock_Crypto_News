@@ -4,7 +4,6 @@ import { marketCommand } from './marketCommands/marketCommand.js';
 import { cryptoCommand } from './crypto/cryptoCommand.js';
 import { trackCommand } from './crypto/trackCommand.js';
 import { rateCommand } from './crypto/rateCommand.js';
-import { newsCommand } from './newsCommands/newsCommand.js';
 import { DISCORD, COMMANDS } from '../config/settings.js';
 
 const commands = {
@@ -13,7 +12,6 @@ const commands = {
     [COMMANDS.STOCK]: marketCommand,
     [COMMANDS.CRYPTO]: cryptoCommand,
     [COMMANDS.TRACK]: trackCommand,
-    [COMMANDS.NEWS]: newsCommand,
     '!rate': rateCommand
 };
 

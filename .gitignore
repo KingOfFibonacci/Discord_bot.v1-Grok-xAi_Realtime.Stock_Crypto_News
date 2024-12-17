@@ -29,3 +29,5 @@ Thumbs.db
 coverage/
 
 # Ignore any other files or directories specific to your project
+
+*.txt
