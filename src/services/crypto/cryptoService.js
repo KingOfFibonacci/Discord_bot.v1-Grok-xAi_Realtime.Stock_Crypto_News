@@ -77,6 +77,8 @@ export const getCryptoNews = async (options = {}) => {
             else if (NEWS_SOURCES_TIERS.TIER_2.includes(article.source)) tier = 2;
             else if (NEWS_SOURCES_TIERS.TIER_3.includes(article.source)) tier = 3;
             else if (NEWS_SOURCES_TIERS.TIER_4.includes(article.source)) tier = 4;
+            else if (NEWS_SOURCES_TIERS.TIER_5.includes(article.source)) tier = 5;
+
 
             return {
                 ...article,

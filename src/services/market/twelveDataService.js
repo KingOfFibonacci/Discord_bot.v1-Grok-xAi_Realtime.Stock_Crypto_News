@@ -49,7 +49,7 @@ class TwelveDataService extends EventEmitter {
             for (const symbol of this.activeSymbols) {
                 try {
                     // Check rate limit
-                    if (this.requestCount >= 8) {
+                    if (this.requestCount >= 6) {
                         console.log('Rate limit reached, waiting for next minute...');
                         await new Promise(resolve => setTimeout(resolve, 60000 - (Date.now() - this.lastMinute)));
                         this.requestCount = 0;

@@ -147,6 +147,8 @@ class CryptoNewsTrackerService extends EventEmitter {
                     else if (NEWS_SOURCES_TIERS.TIER_2.includes(normalizedSource)) tier = 2;
                     else if (NEWS_SOURCES_TIERS.TIER_3.includes(normalizedSource)) tier = 3;
                     else if (NEWS_SOURCES_TIERS.TIER_4.includes(normalizedSource)) tier = 4;
+                    else if (NEWS_SOURCES_TIERS.TIER_5.includes(normalizedSource)) tier = 5;
+
 
                     return {
                         id: article.id,

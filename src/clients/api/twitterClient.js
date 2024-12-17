@@ -15,6 +15,6 @@ const bearer = new TwitterApi(process.env.BEARER_TOKEN);
 const twitterClient = client.readWrite;
 const twitterBearer = bearer.readOnly;
 
-console.log("Listen kid we're fucking cooking");
+console.log("Connection to Twitter successful");
 
 export { twitterClient, twitterBearer };

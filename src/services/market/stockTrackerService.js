@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 import { EmbedBuilder } from 'discord.js';
 import { twelveDataService } from './twelveDataService.js';
+import { DISCORD } from '../../config/settings.js';
+
 
 const TRACKED_STOCKS = ['AAPL', 'TSLA', 'NVDA'];
 
@@ -15,7 +17,7 @@ class StockTrackerService extends EventEmitter {
 
     async initializeChannel(client) {
         try {
-            this.channel = await client.channels.fetch('1317039575742287953');
+            this.channel = await client.channels.fetch(DISCORD.STOCK_PRICE_TRACKER_CHANNEL_ID);
             const messages = await this.channel.messages.fetch({ limit: 1 });
             this.trackingMessage = messages.first();
             
