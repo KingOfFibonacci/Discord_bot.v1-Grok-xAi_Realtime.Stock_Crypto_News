@@ -11,5 +11,6 @@ export const COMMANDS = {
     GROK: '!grok',
     STOCK: '!market',
     CRYPTO: '!crypto',
-    TRACK: '!track'
+    TRACK: '!track',
+    NEWS: '!news'
 }; 
