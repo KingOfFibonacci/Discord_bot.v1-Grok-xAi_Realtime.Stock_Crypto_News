@@ -2,8 +2,9 @@ import { EventEmitter } from 'events';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { API } from '../../config/constants.js';
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
 import { DISCORD } from '../../config/settings.js';
+import { cryptoAlertService } from '../alerts/cryptoalerts/cryptoAlertService.js';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -11,8 +12,6 @@ dotenv.config();
 
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;
 const UPDATE_INTERVAL = 30000; // 30 seconds between updates
-const MAX_TRACKED_COINS = 50;
-const FIELDS_PER_EMBED = 25;
 const TRACKED_COINS_PATH = path.join(process.cwd(), 'src', 'data', 'trackedCoins.json');
 
 class CryptoTrackerService extends EventEmitter {
@@ -21,8 +20,9 @@ class CryptoTrackerService extends EventEmitter {
         this.trackedCoins = new Map();
         this.lastPrices = new Map();
         this.updateInterval = null;
-        this.trackingMessage = null;
-        this.channel = null;
+        this.category = null;
+        this.channelData = new Map();
+        this.coinNames = new Map(); // Store full names of coins
     }
 
     async loadTrackedCoins() {
@@ -32,280 +32,469 @@ class CryptoTrackerService extends EventEmitter {
             trackedSymbols.forEach(symbol => {
                 this.trackedCoins.set(symbol.toUpperCase(), true);
             });
-            console.log('Loaded tracked coins:', trackedSymbols);
+            console.log(`Loaded ${this.trackedCoins.size} tracked coins:`, Array.from(this.trackedCoins.keys()));
         } catch (error) {
             console.error('Error loading tracked coins:', error);
         }
     }
 
-    async saveTrackedCoins() {
-        try {
-            const trackedSymbols = Array.from(this.trackedCoins.keys());
-            const messageId = this.trackingMessage?.id;
-            await fs.writeFile(TRACKED_COINS_PATH, JSON.stringify({
-                trackedSymbols,
-                lastMessageId: messageId
-            }, null, 2));
-        } catch (error) {
-            console.error('Error saving tracked coins:', error);
-        }
-    }
-
     async initializeChannel(client) {
         try {
-            this.channel = await client.channels.fetch(DISCORD.CRYPTO_TRACKER_CHANNEL_ID);
+            // Fetch the category channel
+            const category = await client.channels.fetch(DISCORD.CRYPTO_TRACKER_CHANNEL_ID);
+            if (!category) {
+                throw new Error('Could not find the crypto tracker category');
+            }
+
+            this.category = category;
+            console.log('Successfully connected to crypto tracker category');
             
-            // Load previously tracked coins
+            // Delete existing channels first
+            console.log('Deleting existing channels...');
+            const existingChannels = await category.guild.channels.fetch();
+            const categoryChannels = existingChannels.filter(channel => 
+                channel.parentId === category.id
+            );
+            
+            for (const [_, channel] of categoryChannels) {
+                try {
+                    await channel.delete();
+                    console.log(`Deleted channel: ${channel.name}`);
+                } catch (error) {
+                    console.error(`Error deleting channel ${channel.name}:`, error);
+                }
+            }
+            console.log('Finished deleting existing channels');
+
+            // Load tracked coins
             await this.loadTrackedCoins();
             
-            // Find existing tracking message or create new one
-            const messages = await this.channel.messages.fetch({ limit: 100 });
-            this.trackingMessage = messages.find(m => m.author.id === client.user.id);
-            
-            if (!this.trackingMessage) {
-                this.trackingMessage = await this.channel.send({
-                    embeds: this.createEmbeds([])
-                });
-            }
+            // Initialize channels for each coin
+            await this.initializeChannels();
 
-            // Start tracking if we have coins to track
+            // Start tracking with loaded coins
             if (this.trackedCoins.size > 0) {
-                await this.updatePrices();
-                this.updateInterval = setInterval(() => this.updatePrices(), UPDATE_INTERVAL);
-                console.log('Resumed tracking for', this.trackedCoins.size, 'coins');
+                const symbols = Array.from(this.trackedCoins.keys());
+                await this.startTracking(symbols);
             }
         } catch (error) {
-            console.error('Error initializing crypto tracker channel:', error);
+            console.error('Error initializing crypto tracker category:', error);
+            throw error;
         }
     }
 
-    createEmbed(updates) {
-        const embeds = [];
+    formatChannelName(symbol, fullName) {
+        // Convert full name to lowercase and remove special characters
+        return fullName.toLowerCase()
+            .replace(/[^\w\s-]/g, '')  // Remove special characters except hyphen
+            .replace(/\s+/g, '-')      // Replace spaces with hyphens
+            .slice(0, 100);            // Discord has a channel name length limit
+    }
+
+    async loadCoinNames(symbols) {
+        try {
+            const response = await axios.get(
+                `${API.CRYPTOCOMPARE.BASE_URL}/coin/generalinfo?fsyms=${symbols.join(',')}&tsym=USD&api_key=${CRYPTOCOMPARE_API_KEY}`
+            );
+            
+            const { Data } = response.data;
+            if (!Data) return;
+
+            Data.forEach(coin => {
+                if (coin.CoinInfo?.FullName) {
+                    this.coinNames.set(coin.CoinInfo.Name, coin.CoinInfo.FullName);
+                }
+            });
+            
+            console.log('Loaded full names for coins:', 
+                Array.from(this.coinNames.entries())
+                    .map(([symbol, name]) => `${symbol}: ${name}`)
+                    .join(', ')
+            );
+        } catch (error) {
+            console.error('Error loading coin names:', error);
+        }
+    }
+
+    async initializeChannels() {
+        try {
+            console.log('Starting channel initialization...');
+            const existingChannels = await this.category.guild.channels.fetch();
+            const categoryChannels = existingChannels.filter(channel => 
+                channel.parentId === this.category.id
+            );
+            console.log(`Found ${categoryChannels.size} existing channels in category`);
+            
+            const symbols = Array.from(this.trackedCoins.keys());
+            console.log(`Initializing channels for ${symbols.length} coins:`, symbols);
+
+            // Load full names for all coins first
+            await this.loadCoinNames(symbols);
+
+            // Split symbols into chunks of 20 for API calls
+            const chunkSize = 20;
+            for (let i = 0; i < symbols.length; i += chunkSize) {
+                const symbolsChunk = symbols.slice(i, i + chunkSize);
+                console.log(`Processing chunk ${i/chunkSize + 1}:`, symbolsChunk);
+
+                const priceResponse = await axios.get(
+                    `${API.CRYPTOCOMPARE.BASE_URL}/pricemultifull?fsyms=${symbolsChunk.join(',')}&tsyms=USD&api_key=${CRYPTOCOMPARE_API_KEY}`
+                );
+                const { RAW } = priceResponse.data;
+                
+                for (const symbol of symbolsChunk) {
+                    console.log(`Creating/updating channel for ${symbol}...`);
+                    const priceData = RAW[symbol]?.USD;
+                    if (!priceData) {
+                        console.warn(`No price data available for ${symbol}, skipping...`);
+                        continue;
+                    }
+
+                    try {
+                        // Create initial data object
+                        const initialData = {
+                            symbol,
+                            price: priceData.PRICE,
+                            change24h: priceData.CHANGE24HOUR,
+                            changePercent24h: priceData.CHANGEPCT24HOUR,
+                            volume24h: priceData.VOLUME24HOUR,
+                            lastUpdate: new Date(priceData.LASTUPDATE * 1000).toLocaleString(),
+                            logo: `https://www.cryptocompare.com${priceData.IMAGEURL}`
+                        };
+
+                        // Use full name for channel name, fallback to symbol if not found
+                        const fullName = this.coinNames.get(symbol) || symbol;
+                        const channelName = this.formatChannelName(symbol, fullName);
+                        let channel = categoryChannels.find(c => c.name === channelName);
+
+                        if (!channel) {
+                            // Create new channel with proper permissions
+                            channel = await this.category.guild.channels.create({
+                                name: channelName,
+                                type: ChannelType.GuildText,
+                                parent: this.category.id,
+                                permissionOverwrites: [
+                                    {
+                                        id: this.category.guild.roles.everyone.id,
+                                        deny: [PermissionFlagsBits.SendMessages],
+                                        allow: [PermissionFlagsBits.ViewChannel]
+                                    }
+                                ]
+                            });
+
+                            // Send initial message and pin it
+                            const message = await channel.send({
+                                content: `Price tracking for ${fullName} (${symbol})`,
+                                embeds: [this.createCoinEmbed(symbol, initialData)]
+                            });
+                            await message.pin();
+
+                            // Store channel and message data
+                            this.channelData.set(symbol, {
+                                channelId: channel.id,
+                                messageId: message.id,
+                                isPinned: true
+                            });
+
+                            console.log(`Created new channel for ${fullName} (${symbol}): ${channel.id}`);
+                        } else {
+                            const messages = await channel.messages.fetch({ limit: 1 });
+                            const message = messages.first();
+                            
+                            if (message) {
+                                await message.edit({
+                                    content: `Price tracking for ${fullName} (${symbol})`,
+                                    embeds: [this.createCoinEmbed(symbol, initialData)]
+                                });
+                                
+                                // Ensure message is pinned
+                                if (!message.pinned) {
+                                    await message.pin();
+                                }
+                                
+                                this.channelData.set(symbol, {
+                                    channelId: channel.id,
+                                    messageId: message.id,
+                                    isPinned: true
+                                });
+                            }
+                            console.log(`Updated existing channel for ${fullName} (${symbol}): ${channel.id}`);
+                        }
+                    } catch (error) {
+                        console.error(`Error setting up channel for ${symbol}:`, error);
+                    }
+                }
+
+                if (i + chunkSize < symbols.length) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+            
+            console.log('Channel initialization complete!');
+            console.log(`Successfully created/updated ${this.channelData.size} channels`);
+        } catch (error) {
+            console.error('Error initializing channels:', error);
+        }
+    }
+
+    createSubscribeButton() {
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('subscribe_alerts')
+                    .setLabel('Subscribe to Price Alerts')
+                    .setStyle(ButtonStyle.Primary)
+            );
+        return row;
+    }
+
+    async handleSubscription(interaction) {
+        const userId = interaction.user.id;
+        const symbol = interaction.message.embeds[0].title.split(' ')[0];
         
-        // First embed with overview and top movers
-        const overviewEmbed = new EmbedBuilder()
-            .setTitle('🚀 Premium Crypto Analytics')
-            .setColor('#00ff88')
-            .setFooter({ 
-                text: '💎 Premium Market Intelligence • Updated every 30s'
-            })
-            .setTimestamp();
-
-        // Market Overview Section
-        let totalVolume = 0;
-        let gainers = 0;
-        let losers = 0;
-
-        updates.forEach(update => {
-            totalVolume += update.volume24h;
-            if (update.change24h >= 0) gainers++; else losers++;
+        // Get all targets for the symbol
+        const targets = cryptoAlertService.getTargets(symbol);
+        
+        // Subscribe user to all targets for this symbol
+        let subscribed = false;
+        for (const target of targets) {
+            if (await cryptoAlertService.subscribe(userId, symbol, target.price, target.direction)) {
+                subscribed = true;
+            }
+        }
+        
+        await interaction.reply({ 
+            content: subscribed ? 
+                `You've been subscribed to price alerts for ${symbol}!` : 
+                `No price targets found for ${symbol}. Please set up targets first.`,
+            ephemeral: true 
         });
+    }
 
-        // Add Market Summary
-        overviewEmbed.addFields({
-            name: '📊 Market Overview',
-            value: `Trading Volume: $${(totalVolume/1e9).toFixed(2)}B\n` +
-                   `Gainers: ${gainers} 📈 | Losers: ${losers} 📉\n` +
-                   `Last Update: ${new Date().toLocaleTimeString()}`,
-            inline: false
-        });
+    createCoinEmbed(symbol, data = null) {
+        const embed = new EmbedBuilder()
+            .setTitle(`${symbol} Price Analysis`)
+            .setColor(data?.changePercent24h >= 0 ? '#00ff88' : '#ff0055');
 
-        // Group coins by performance
-        const topGainers = updates
-            .filter(u => u.change24h > 0)
-            .sort((a, b) => b.change24h - a.change24h)
-            .slice(0, 3);
+        if (data) {
+            if (data.logo) {
+                embed.setThumbnail(data.logo);
+            }
 
-        const topLosers = updates
-            .filter(u => u.change24h < 0)
-            .sort((a, b) => a.change24h - b.change24h)
-            .slice(0, 3);
+            // Format price with appropriate decimal places based on value
+            const formatPrice = (price) => {
+                if (price >= 1000) return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (price >= 1) return price.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+                return price.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 });
+            };
 
-        // Add Top Movers
-        if (topGainers.length > 0) {
-            overviewEmbed.addFields({
-                name: '🔥 Top Gainers',
-                value: topGainers.map(coin => 
-                    `${coin.symbol}: +${coin.changePercent24h.toFixed(2)}% ($${coin.price.toLocaleString()})`
-                ).join('\n'),
+            // Format volume with K/M/B suffix
+            const formatVolume = (vol) => {
+                if (vol >= 1e9) return `$${(vol / 1e9).toFixed(2)}B`;
+                if (vol >= 1e6) return `$${(vol / 1e6).toFixed(2)}M`;
+                if (vol >= 1e3) return `$${(vol / 1e3).toFixed(2)}K`;
+                return `$${vol.toFixed(2)}`;
+            };
+
+            // Price and change field
+            embed.addFields({
+                name: '💰 Current Price',
+                value: `$${formatPrice(data.price)}`,
                 inline: true
             });
-        }
 
-        if (topLosers.length > 0) {
-            overviewEmbed.addFields({
-                name: '💫 Top Losers',
-                value: topLosers.map(coin => 
-                    `${coin.symbol}: ${coin.changePercent24h.toFixed(2)}% ($${coin.price.toLocaleString()})`
-                ).join('\n'),
+            // 24h change with emoji
+            const changeEmoji = data.changePercent24h >= 0 ? '📈' : '📉';
+            embed.addFields({
+                name: '24h Change',
+                value: `${changeEmoji} ${data.changePercent24h.toFixed(2)}%`,
                 inline: true
             });
-        }
 
-        embeds.push(overviewEmbed);
-
-        // Split remaining coins into chunks of 25 for additional embeds
-        for (let i = 0; i < updates.length; i += 25) {
-            const chunk = updates.slice(i, i + 25);
-            const priceEmbed = new EmbedBuilder()
-                .setTitle(`🚀 Crypto Prices ${Math.floor(i/25) + 1}/${Math.ceil(updates.length/25)}`)
-                .setColor('#00ff88')
-                .setTimestamp();
-
-            chunk.forEach(update => {
-                const changeEmoji = update.change24h >= 0 ? '🟢' : '🔴';
-                const trendEmoji = update.priceChange >= 0 ? '📈' : '📉';
-                const volumeFormatted = update.volume24h > 1e9 
-                    ? `$${(update.volume24h/1e9).toFixed(2)}B`
-                    : `$${(update.volume24h/1e6).toFixed(2)}M`;
-
-                priceEmbed.addFields({
-                    name: `${changeEmoji} ${update.symbol}`,
-                    value: `💸 $${update.price.toLocaleString()}\n` +
-                           `${trendEmoji} ${update.changePercent24h.toFixed(2)}%\n` +
-                           `📊 Vol: ${volumeFormatted}`,
-                    inline: true
-                });
+            // Volume
+            embed.addFields({
+                name: '📊 24h Volume',
+                value: formatVolume(data.volume24h),
+                inline: true
             });
 
-            embeds.push(priceEmbed);
-        }
-
-        return embeds;
-    }
-
-    createEmbeds(updates) {
-        const embeds = [];
-        
-        // Split updates into chunks of 25
-        for (let i = 0; i < updates.length; i += FIELDS_PER_EMBED) {
-            const chunk = updates.slice(i, i + FIELDS_PER_EMBED);
-            const embed = new EmbedBuilder()
-                .setTitle(`🚀 Live Crypto Price Tracker ${embeds.length + 1}/${Math.ceil(updates.length / FIELDS_PER_EMBED)}`)
-                .setColor('#0099ff')
-                .setTimestamp();
-
-            if (chunk.length === 0) {
-                embed.setDescription('No cryptocurrencies currently tracked');
-            } else {
-                chunk.forEach(update => {
-                    const changeEmoji = update.change24h >= 0 ? '📈' : '📉';
-                    const recentChangeEmoji = update.priceChange >= 0 ? '🟢' : '🔴';
-                    
-                    embed.addFields({
-                        name: `${update.symbol} ${recentChangeEmoji}`,
-                        value: `💰 $${update.price.toLocaleString()}\n` +
-                              `${changeEmoji} 24h: ${update.changePercent24h.toFixed(2)}%\n` +
-                              `📊 Vol: $${Math.round(update.volume24h).toLocaleString()}`,
-                        inline: true
-                    });
+            // Add price targets if they exist
+            const targets = cryptoAlertService.getTargets(symbol);
+            if (targets.length > 0) {
+                const targetsText = targets.map(t => {
+                    const emoji = t.direction === 'above' ? '⬆️' : '⬇️';
+                    const status = t.triggered ? '✅' : '⏳';
+                    return `${emoji} $${formatPrice(t.price)} ${status}`;
+                }).join('\n');
+                
+                embed.addFields({
+                    name: '🎯 Price Targets',
+                    value: targetsText,
+                    inline: false
                 });
             }
-            embeds.push(embed);
-        }
 
-        return embeds;
-    }
-
-    async updateMessage(updates) {
-        if (this.trackingMessage) {
-            try {
-                await this.trackingMessage.edit({
-                    embeds: this.createEmbed(updates)
-                });
-            } catch (error) {
-                console.error('Error updating tracking message:', error);
-            }
-        }
-    }
-
-    async startTracking(symbols) {
-        // Ensure we don't exceed the maximum number of tracked coins
-        const validSymbols = symbols.slice(0, MAX_TRACKED_COINS);
-        
-        // Add symbols to tracked coins
-        validSymbols.forEach(symbol => {
-            this.trackedCoins.set(symbol.toUpperCase(), true);
-        });
-
-        // Start the update interval if not already running
-        if (!this.updateInterval) {
-            await this.updatePrices();
-            this.updateInterval = setInterval(() => this.updatePrices(), UPDATE_INTERVAL);
-        }
-
-        // Save the updated tracking list
-        await this.saveTrackedCoins();
-    }
-
-    async stopTracking(symbols) {
-        if (!symbols) {
-            // Stop tracking all coins
-            this.trackedCoins.clear();
-            this.lastPrices.clear();
-            if (this.updateInterval) {
-                clearInterval(this.updateInterval);
-                this.updateInterval = null;
-            }
-        } else {
-            // Stop tracking specific coins
-            symbols.forEach(symbol => {
-                this.trackedCoins.delete(symbol.toUpperCase());
-                this.lastPrices.delete(symbol.toUpperCase());
+            // Add timestamp
+            embed.setFooter({ 
+                text: `Last Updated: ${new Date().toLocaleTimeString()}`
             });
-
-            // If no coins are being tracked, stop the interval
-            if (this.trackedCoins.size === 0 && this.updateInterval) {
-                clearInterval(this.updateInterval);
-                this.updateInterval = null;
-            }
+            embed.setTimestamp();
         }
 
-        // Save the updated tracking list
-        await this.saveTrackedCoins();
+        return embed;
     }
 
     async updatePrices() {
         try {
-            if (this.trackedCoins.size === 0) {
-                await this.updateMessage([]);
-                return;
-            }
+            if (this.trackedCoins.size === 0) return;
 
+            // Fetch all prices at once
             const symbols = Array.from(this.trackedCoins.keys()).join(',');
             const response = await axios.get(
-                `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${symbols}&tsyms=USD&api_key=${CRYPTOCOMPARE_API_KEY}`
+                `${API.CRYPTOCOMPARE.BASE_URL}/pricemultifull?fsyms=${symbols}&tsyms=USD&api_key=${CRYPTOCOMPARE_API_KEY}`
             );
 
             const { RAW } = response.data;
             const updates = [];
 
+            // Prepare all updates
             for (const symbol in RAW) {
                 const data = RAW[symbol].USD;
-                const lastPrice = this.lastPrices.get(symbol);
-                const currentPrice = data.PRICE;
-                
-                // Calculate price change
-                const priceChange = lastPrice ? ((currentPrice - lastPrice) / lastPrice) * 100 : 0;
-                
-                // Store new price
-                this.lastPrices.set(symbol, currentPrice);
-
                 updates.push({
                     symbol,
-                    price: currentPrice,
+                    price: data.PRICE,
                     change24h: data.CHANGE24HOUR,
                     changePercent24h: data.CHANGEPCT24HOUR,
-                    priceChange,
                     volume24h: data.VOLUME24HOUR,
-                    lastUpdate: new Date(data.LASTUPDATE * 1000).toLocaleString()
+                    lastUpdate: new Date(data.LASTUPDATE * 1000).toLocaleString(),
+                    logo: `https://www.cryptocompare.com${data.IMAGEURL}`
                 });
             }
 
-            await this.updateMessage(updates);
+            // Update all messages
+            await Promise.all(updates.map(async (update) => {
+                try {
+                    const channelData = this.channelData.get(update.symbol);
+                    if (!channelData) return;
+
+                    // Fetch the channel using the guild's channels collection
+                    const channel = await this.category.guild.channels.fetch(channelData.channelId);
+                    if (!channel) return;
+
+                    // Update embed message and ensure it's pinned
+                    const message = await channel.messages.fetch(channelData.messageId);
+                    if (message) {
+                        const fullName = this.coinNames.get(update.symbol) || update.symbol;
+                        const embed = this.createCoinEmbed(update.symbol, update);
+                        await message.edit({
+                            content: `Price tracking for ${fullName} (${update.symbol})`,
+                            embeds: [embed]
+                        });
+
+                        // Ensure message stays pinned
+                        if (!message.pinned) {
+                            await message.pin();
+                            this.channelData.get(update.symbol).isPinned = true;
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error updating ${update.symbol}:`, error);
+                }
+            }));
         } catch (error) {
             console.error('Error updating crypto prices:', error);
             this.emit('error', error);
+        }
+    }
+
+    async updateMessage(updates) {
+        // Remove this method as we're not using a tracking message in forum channels
+        return;
+    }
+
+    createEmbeds(updates) {
+        const embeds = [];
+        
+        // Overview embed
+        const overviewEmbed = new EmbedBuilder()
+            .setTitle('🚀 Crypto Watchlist')
+            .setColor('#00ff88')
+            .setTimestamp();
+
+        if (updates.length === 0) {
+            overviewEmbed.setDescription('No cryptocurrencies currently tracked');
+            return [overviewEmbed];
+        }
+
+        // Add coins to overview
+        updates.forEach(update => {
+            const changeEmoji = update.change24h >= 0 ? '📈' : '📉';
+            const recentChangeEmoji = update.priceChange >= 0 ? '🟢' : '🔴';
+            
+            overviewEmbed.addFields({
+                name: `${update.symbol} ${recentChangeEmoji}`,
+                value: `💰 $${update.price.toLocaleString()}\n` +
+                       `${changeEmoji} 24h: ${update.changePercent24h.toFixed(2)}%\n` +
+                       `📊 Vol: $${Math.round(update.volume24h).toLocaleString()}`,
+                inline: true
+            });
+
+            if (update.logo) {
+                overviewEmbed.setThumbnail(update.logo);
+            }
+        });
+
+        embeds.push(overviewEmbed);
+        return embeds;
+    }
+
+    async startTracking(symbols) {
+        const validSymbols = symbols.slice(0, 50);
+        
+        validSymbols.forEach(symbol => {
+            this.trackedCoins.set(symbol.toUpperCase(), true);
+        });
+
+        // Clear any existing interval
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+
+        // Start a new update interval with longer delay to avoid rate limits
+        await this.updatePrices();
+        this.updateInterval = setInterval(async () => {
+            console.log('Running scheduled price update...');
+            try {
+                await this.updatePrices();
+                console.log('Scheduled price update completed successfully');
+            } catch (error) {
+                console.error('Error in scheduled price update:', error);
+            }
+        }, UPDATE_INTERVAL);
+        console.log('Started new price update interval');
+    }
+
+    async stopTracking(symbols) {
+        if (!symbols) {
+            this.trackedCoins.clear();
+            this.lastPrices.clear();
+            if (this.updateInterval) {
+                clearInterval(this.updateInterval);
+                this.updateInterval = null;
+                console.log('Cleared all tracking and stopped update interval');
+            }
+        } else {
+            symbols.forEach(symbol => {
+                this.trackedCoins.delete(symbol.toUpperCase());
+                this.lastPrices.delete(symbol.toUpperCase());
+            });
+
+            if (this.trackedCoins.size === 0 && this.updateInterval) {
+                clearInterval(this.updateInterval);
+                this.updateInterval = null;
+                console.log('No more coins to track, stopped update interval');
+            }
         }
     }
 

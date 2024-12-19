@@ -1,0 +1,284 @@
+{
+    "BTC": {
+        "targets": [
+            {
+                "price": 50000,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            },
+            {
+                "price": 40000,
+                "direction": "below",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "ETH": {
+        "targets": [
+            {
+                "price": 3000,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            },
+            {
+                "price": 2500,
+                "direction": "below",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "XRP": {
+        "targets": [
+            {
+                "price": 0.75,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "SOL": {
+        "targets": [
+            {
+                "price": 150,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "DOGE": {
+        "targets": [
+            {
+                "price": 0.15,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "LINK": {
+        "targets": [
+            {
+                "price": 20,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "BNB": {
+        "targets": [
+            {
+                "price": 350,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "ADA": {
+        "targets": [
+            {
+                "price": 0.75,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "AVAX": {
+        "targets": [
+            {
+                "price": 40,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "FTM": {
+        "targets": [
+            {
+                "price": 0.75,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "AAVE": {
+        "targets": [
+            {
+                "price": 120,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "LTC": {
+        "targets": [
+            {
+                "price": 80,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "DOT": {
+        "targets": [
+            {
+                "price": 8,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "UNI": {
+        "targets": [
+            {
+                "price": 7,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "XLM": {
+        "targets": [
+            {
+                "price": 0.15,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "SHIB": {
+        "targets": [
+            {
+                "price": 0.00002,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "CRV": {
+        "targets": [
+            {
+                "price": 0.75,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "ARB": {
+        "targets": [
+            {
+                "price": 2,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "STX": {
+        "targets": [
+            {
+                "price": 2.5,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "FIL": {
+        "targets": [
+            {
+                "price": 7,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "ETC": {
+        "targets": [
+            {
+                "price": 25,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "APT": {
+        "targets": [
+            {
+                "price": 10,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "NEAR": {
+        "targets": [
+            {
+                "price": 3,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "LDO": {
+        "targets": [
+            {
+                "price": 3,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "OP": {
+        "targets": [
+            {
+                "price": 3.5,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "SEI": {
+        "targets": [
+            {
+                "price": 1,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    },
+    "BCH": {
+        "targets": [
+            {
+                "price": 300,
+                "direction": "above",
+                "triggered": false,
+                "subscribers": []
+            }
+        ]
+    }
+} 
