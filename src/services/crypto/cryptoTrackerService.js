@@ -48,23 +48,6 @@ class CryptoTrackerService extends EventEmitter {
 
             this.category = category;
             console.log('Successfully connected to crypto tracker category');
-            
-            // Delete existing channels first
-            console.log('Deleting existing channels...');
-            const existingChannels = await category.guild.channels.fetch();
-            const categoryChannels = existingChannels.filter(channel => 
-                channel.parentId === category.id
-            );
-            
-            for (const [_, channel] of categoryChannels) {
-                try {
-                    await channel.delete();
-                    console.log(`Deleted channel: ${channel.name}`);
-                } catch (error) {
-                    console.error(`Error deleting channel ${channel.name}:`, error);
-                }
-            }
-            console.log('Finished deleting existing channels');
 
             // Load tracked coins
             await this.loadTrackedCoins();
