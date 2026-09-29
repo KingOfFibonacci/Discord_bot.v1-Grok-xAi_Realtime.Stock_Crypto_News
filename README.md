@@ -1,4 +1,4 @@
-# Discord Crypto & Market Bot
+# Discord Crypto & Market Bot (Deprecated/Unmaintained)
 
 The first discord bot with Grok integration. A powerful Discord bot for real-time cryptocurrency tracking, market data, and news aggregation. Built with Node.js and Discord.js.
 
